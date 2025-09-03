@@ -10,28 +10,30 @@ extern  scanf
 
 section .data
 prompt      db  "Bitte Zahl (1-100) eingeben: ", 0
+versuch     db  "Versuch: %d", 10, 0
 fmtIn       db  "%d", 0
 fmtOutH     db  "%d ist zu hoch.", 10, 0
 fmtOutL     db  "%d ist zu niedrig.", 10, 0
-fmtOutK     db  "%d Korrekt.", 10, 0
+fmtOutK     db  "%d ist korrekt. %d Versuche benoetigt.", 10, 0
 
-rnd         dd  0          ; Zufallszahl (1..100)
+rnd         dd  0
 input       dd  0
+counter     dd  0
 
 section .text
 main:
-    ; --- einfache "Random"-Zahl 1..100 aus TSC generieren ---
-    rdtsc                  ; EDX:EAX = TSC
+    ; --- Zufallszahl 1..100 aus TSC ---
+    rdtsc
     mov     ecx, 100
     xor     edx, edx
-    div     ecx            ; EAX/100 -> Quotient in EAX, Rest in EDX
-    inc     edx            ; Rest 0..99 => 1..100
+    div     ecx
+    inc     edx
     mov     [rel rnd], edx
 
     ; printf(prompt)
     sub     rsp, 40
     lea     rcx, [rel prompt]
-    xor     eax, eax       ; variadische Funktion → AL = 0
+    xor     eax, eax
     call    printf
     add     rsp, 40
 
@@ -40,9 +42,12 @@ eingabe:
     sub     rsp, 40
     lea     rcx, [rel fmtIn]
     lea     rdx, [rel input]
-    xor     eax, eax       ; variadische Funktion → AL = 0
+    xor     eax, eax
     call    scanf
     add     rsp, 40
+
+    ; counter++
+    inc     dword [rel counter]
 
     ; Vergleich input vs rnd
     mov     eax, [rel input]
@@ -59,7 +64,7 @@ ist_hoeher:
     xor     eax, eax
     call    printf
     add     rsp, 40
-    jmp     eingabe
+    jmp     versuch_ausgabe
 
 ist_niedriger:
     ; printf("%d ist zu niedrig.", input)
@@ -69,16 +74,29 @@ ist_niedriger:
     xor     eax, eax
     call    printf
     add     rsp, 40
-    jmp     eingabe
+    jmp     versuch_ausgabe
 
 ist_gleich:
-    ; printf("%d Korrekt.", input)
+    ; printf("%d ist korrekt. %d Versuche benoetigt.", input, counter)
     sub     rsp, 40
     lea     rcx, [rel fmtOutK]
-    mov     edx, eax
+    mov     edx, eax                 ; %d -> eingegebene Zahl
+    mov     r8d, [rel counter]       ; %d -> Versuche
     xor     eax, eax
     call    printf
     add     rsp, 40
+    jmp     exit
 
+versuch_ausgabe:
+    ; printf("Versuch: %d", counter)
+    sub     rsp, 40
+    lea     rcx, [rel versuch]
+    mov     edx, [rel counter]
+    xor     eax, eax
+    call    printf
+    add     rsp, 40
+    jmp     eingabe
+
+exit:
     xor     eax, eax
     ret
